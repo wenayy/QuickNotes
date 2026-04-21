@@ -1,0 +1,27 @@
+{
+  "name": "quick-notes",
+  "version": "1.0.0",
+  "description": "A minimal menubar notes app built with Electron.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "keywords": [
+    "electron",
+    "notes",
+    "menubar"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "menubar": "^9.4.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "electron": "^30.0.1"
+  }
+}

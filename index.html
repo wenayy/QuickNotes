@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Quick Notes Drop</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 420px;
+      height: 600px;
+      background: #141414;
+      font-family: 'Geist', sans-serif;
+      color: #f0ede8;
+      overflow: hidden;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .app {
+      width: 420px;
+      height: 600px;
+      background: #141414;
+      border: 0.5px solid rgba(255, 255, 255, 0.13);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: popIn .2s cubic-bezier(.34, 1.56, .64, 1) both;
+    }
+
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: scale(.94) translateY(-6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0)
+      }
+    }
+
+    .drag-handle {
+      -webkit-app-region: drag;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      z-index: 0;
+    }
+
+    .no-drag {
+      -webkit-app-region: no-drag;
+    }
+
+    .header {
+      padding: 16px 16px 0;
+      flex-shrink: 0;
+      background: #141414;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .cluster-name {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 24px;
+      color: #f0ede8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      letter-spacing: -.3px;
+    }
+
+    .cluster-name svg {
+      opacity: .3;
+      transition: opacity .15s;
+      flex-shrink: 0;
+      fill: none;
+      stroke: #f0ede8;
+      stroke-width: 1.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .cluster-name:hover svg {
+      opacity: .7;
+    }
+
+    .title-input {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 24px;
+      color: #f0ede8;
+      background: #141414;
+      border: none;
+      outline: none;
+      border-bottom: 1.5px solid #c8f060;
+      padding: 0 2px;
+      width: 180px;
+      caret-color: #c8f060;
+    }
+
+    .shortcut-hint {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #4a4744;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .kbd {
+      background: #242424;
+      border: 0.5px solid rgba(255, 255, 255, 0.13);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #8a8680;
+    }
+
+    .cluster-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      scrollbar-width: none;
+      background: #141414;
+    }
+
+    .cluster-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .c-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 0.5px solid rgba(255, 255, 255, 0.07);
+      color: #8a8680;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+
+    .c-tab:hover {
+      border-color: rgba(255, 255, 255, 0.13);
+      color: #f0ede8;
+    }
+
+    .c-tab.active {
+      font-weight: 500;
+    }
+
+    .c-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .c-x {
+      font-size: 13px;
+      opacity: .4;
+      padding: 0 2px;
+      line-height: 1;
+      transition: opacity .1s;
+    }
+
+    .c-x:hover {
+      opacity: 1;
+    }
+
+    .c-tab-add {
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 0.5px dashed rgba(255, 255, 255, 0.07);
+      color: #4a4744;
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+
+    .c-tab-add:hover {
+      border-color: rgba(255, 255, 255, 0.13);
+      color: #8a8680;
+    }
+
+    .cat-row {
+      display: flex;
+      gap: 6px;
+      padding: 0 16px 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-shrink: 0;
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
+      background: #141414;
+    }
+
+    .cat-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-pill {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 0.5px solid rgba(255, 255, 255, 0.07);
+      color: #8a8680;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all .15s;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .cat-pill:hover {
+      border-color: rgba(255, 255, 255, 0.13);
+      color: #f0ede8;
+    }
+
+    .cat-pill.active {
+      background: #c8f060;
+      color: #1a2200;
+      border-color: #c8f060;
+      font-weight: 500;
+    }
+
+    .feed {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: #2e2e2e transparent;
+      min-height: 0;
+      background: #141414;
+    }
+
+    .feed::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .feed::-webkit-scrollbar-thumb {
+      background: #2e2e2e;
+      border-radius: 2px;
+    }
+
+    .empty {
+      padding: 32px 0;
+      text-align: center;
+      color: #4a4744;
+      font-size: 13px;
+      line-height: 1.9;
+    }
+
+    .row {
+      flex-shrink: 0;
+      border: 0.5px solid rgba(255, 255, 255, 0.07);
+      border-left: 3px solid rgba(255, 255, 255, 0.13);
+      border-radius: 8px;
+      margin-bottom: 4px;
+      background: #1c1c1c;
+      overflow: hidden;
+      transition: background .12s;
+      animation: slideIn .15s ease both;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-5px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0)
+      }
+    }
+
+    .row:hover {
+      background: #2c2c2c;
+    }
+
+    .row-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    .tag {
+      font-size: 9px;
+      font-weight: 500;
+      flex-shrink: 0;
+      width: 34px;
+      font-family: 'Geist Mono', monospace;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+    }
+
+    .row-text {
+      font-size: 13px;
+      color: #e8e5e0 !important;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.5;
+    }
+
+    .row-sub {
+      font-size: 11px;
+      color: #5a5754;
+      margin-top: 3px;
+    }
+
+    .hov {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity .12s;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .row:hover .hov {
+      opacity: 1;
+    }
+    
+    .time-span, .pin-dot {
+      transition: opacity .12s;
+    }
+    
+    .row:hover .time-span, .row:hover .pin-dot {
+      opacity: 0;
+    }
+
+    .ico {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background .1s;
+      flex-shrink: 0;
+    }
+
+    .ico:hover {
+      background: #2e2e2e;
+    }
+
+    .ico svg {
+      width: 13px;
+      height: 13px;
+      stroke: #8a8680;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.3;
+    }
+
+    .ico:hover svg {
+      stroke: #f0ede8;
+    }
+
+    .ico.pin-on svg {
+      stroke: #fbbf24;
+    }
+
+    .ico.del:hover {
+      background: rgba(248, 113, 113, .1);
+    }
+
+    .ico.del:hover svg {
+      stroke: #f87171;
+    }
+
+    .cpill {
+      font-size: 10px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 0.5px solid rgba(255, 255, 255, 0.13);
+      color: #8a8680;
+      font-family: 'Geist Mono', monospace;
+      transition: all .12s;
+      white-space: nowrap;
+    }
+
+    .cpill:hover {
+      border-color: #34d399;
+      color: #34d399;
+    }
+
+    .cpill.ok {
+      color: #4a4744;
+      border-color: rgba(255, 255, 255, 0.07);
+    }
+
+    .pin-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #fbbf24;
+      flex-shrink: 0;
+      animation: dotPop .2s cubic-bezier(.34, 1.56, .64, 1);
+    }
+
+    /* SELECTION UI */
+    .sel-circle {
+      position: absolute;
+      top: 10px;
+      left: -18px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      opacity: 0;
+    }
+
+    .row:hover .sel-circle, .row.selected .sel-circle {
+      opacity: 1;
+      left: 6px;
+    }
+
+    .row.selected .sel-circle {
+      background: #34d399;
+      border-color: #34d399;
+    }
+
+    .sel-circle svg {
+      width: 8px;
+      height: 8px;
+      stroke: #141414;
+      stroke-width: 3;
+      fill: none;
+      display: none;
+    }
+
+    .row.selected .sel-circle svg {
+      display: block;
+    }
+
+    .row.selected {
+      background: rgba(52, 211, 153, 0.03) !important;
+    }
+
+    .sel-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(22, 22, 22, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 9000;
+    }
+
+    .sel-bar.active {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .sel-count {
+      font-size: 12px;
+      color: #8a8680;
+      font-family: 'Geist Mono', monospace;
+      padding-right: 8px;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sel-btn {
+      font-size: 12px;
+      color: #f0ede8;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sel-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .sel-btn.del:hover {
+      color: #f87171;
+    }
+
+    @keyframes dotPop {
+      from {
+        transform: scale(0)
+      }
+
+      to {
+        transform: scale(1)
+      }
+    }
+
+    .chev {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      opacity: .25;
+      transition: transform .2s, opacity .2s;
+      stroke: #f0ede8;
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+    }
+
+    .chev.open {
+      transform: rotate(180deg);
+      opacity: .5;
+    }
+
+    .exp {
+      display: none;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.07);
+      background: #1a1a1a;
+    }
+
+    .exp.open {
+      display: block;
+      animation: fadeDown .15s ease;
+    }
+
+    @keyframes fadeDown {
+      from {
+        opacity: 0;
+        transform: translateY(-3px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .code-block {
+      font-family: 'Geist Mono', monospace;
+      font-size: 13px;
+      color: #a78bfa;
+      padding: 13px 15px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #1a1a1a;
+    }
+
+    .code-foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 13px;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.07);
+      background: #1a1a1a;
+    }
+
+    .copy-btn {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 0.5px solid #34d399;
+      color: #34d399;
+      cursor: pointer;
+      background: transparent;
+      font-family: 'Geist Mono', monospace;
+      letter-spacing: .5px;
+      transition: all .12s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(52, 211, 153, .08);
+    }
+
+    .copy-btn.ok {
+      border-color: rgba(255, 255, 255, 0.07);
+      color: #4a4744;
+    }
+
+    .lang-tag {
+      font-size: 10px;
+      color: #4a4744;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .checkbox {
+      width: 17px;
+      height: 17px;
+      border-radius: 4px;
+      border: 1.5px solid rgba(255, 255, 255, 0.13);
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      transition: all .15s;
+    }
+
+    .checkbox.done {
+      background: #34d399;
+      border-color: #34d399;
+    }
+
+    .checkbox svg {
+      width: 9px;
+      height: 9px;
+      opacity: 0;
+      fill: none;
+      stroke: white;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: opacity .1s;
+    }
+
+    .checkbox.done svg {
+      opacity: 1;
+    }
+
+    .img-wrap {
+      background: #242424;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+    }
+
+    .img-wrap img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .add-bar {
+      padding: 10px 12px;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+      background: #141414;
+    }
+
+    .add-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: #f0ede8;
+      outline: none;
+      font-family: 'Geist', sans-serif;
+      caret-color: #c8f060;
+    }
+
+    .add-input::placeholder {
+      color: #4a4744;
+    }
+
+    .add-btn {
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      border: 0.5px solid;
+      background: transparent;
+      font-family: 'Geist Mono', monospace;
+      transition: all .12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .add-btn.task {
+      border-color: rgba(248, 113, 113, .4);
+      color: #f87171;
+    }
+
+    .add-btn.task:hover {
+      background: rgba(248, 113, 113, .08);
+    }
+
+    .add-btn.note {
+      border-color: rgba(255, 255, 255, 0.13);
+      color: #8a8680;
+    }
+
+    .add-btn.note:hover {
+      background: #242424;
+    }
+
+    .undo-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: #242424;
+      border-top: 0.5px solid rgba(255, 255, 255, 0.07);
+      padding: 9px 15px;
+      flex-shrink: 0;
+    }
+
+    .undo-bar.show {
+      display: flex;
+      animation: slideUp .18s ease;
+    }
+
+    .undo-bar.hiding {
+      animation: slideDown .22s ease forwards;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(5px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 1;
+        transform: translateY(0)
+      }
+
+      to {
+        opacity: 0;
+        transform: translateY(5px)
+      }
+    }
+
+    .undo-txt {
+      font-size: 12px;
+      color: #8a8680;
+      flex: 1;
+    }
+
+    .undo-prog {
+      width: 32px;
+      height: 2px;
+      background: #2e2e2e;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .undo-fill {
+      height: 100%;
+      width: 100%;
+      background: #a78bfa;
+      transition: width 5s linear;
+    }
+
+    .undo-btn {
+      font-size: 11px;
+      color: #a78bfa;
+      cursor: pointer;
+      font-weight: 500;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    .undo-btn:hover {
+      color: #c4b5fd;
+    }
+
+    a.row-link {
+      color: #60a5fa;
+      text-decoration: none;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    a.row-link:hover {
+      text-decoration: underline;
+    }
+
+    .note-full {
+      padding: 10px 14px 13px 57px;
+      font-size: 14px;
+      color: #8a8680;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #1a1a1a;
+    }
+
+    .link-full {
+      padding: 10px 14px 13px 14px;
+      font-size: 13px;
+      word-break: break-all;
+      background: #1a1a1a;
+    }
+
+    .link-full a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .link-full a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="header" style="-webkit-app-region: drag;">
+      <div class="title-row">
+        <div class="cluster-name no-drag" id="clusterNameWrap" onclick="startRename(event)">
+          <span id="clusterTitle">inbox</span>
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M2 9l1.5-1.5 5-5 1.5 1.5-5 5L2 9z" />
+          </svg>
+        </div>
+        <div class="shortcut-hint no-drag"><span class="kbd">⌃Space</span><span>toggle</span></div>
+      </div>
+      <div class="cluster-tabs no-drag" id="clusterTabs"></div>
+    </div>
+    <div class="cat-row no-drag" id="catRow"></div>
+    <div class="feed no-drag" id="feed"></div>
+    <div class="add-bar no-drag">
+      <input class="add-input" id="addInput" placeholder="paste or type anything…" onkeydown="onKey(event)" />
+      <div class="add-btn task" onclick="quickAdd('task')">+ task</div>
+      <div class="add-btn note" onclick="quickAdd('note')">+ note</div>
+    </div>
+
+    <!-- SELECTION BAR -->
+    <div class="sel-bar" id="selBar">
+      <div class="sel-count" id="selCount">0 selected</div>
+      <div class="sel-btn" onclick="bulkCopy()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        Copy
+      </div>
+      <div class="sel-btn del" onclick="bulkDelete()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        Delete
+      </div>
+      <div class="sel-btn" onclick="clearSelect()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        Clear
+      </div>
+    </div>
+    <div class="undo-bar" id="undoBar">
+      <span class="undo-txt">deleted</span>
+      <div class="undo-prog">
+        <div class="undo-fill" id="undoFill"></div>
+      </div>
+      <span class="undo-btn" onclick="undoDelete()">undo</span>
+    </div>
+  </div>
+  <script>
+    const COLORS = ['#f87171', '#fbbf24', '#34d399', '#a78bfa', '#60a5fa', '#f472b6'];
+    const TYPE_COLOR = { code: '#a78bfa', link: '#60a5fa', task: '#f87171', image: '#fbbf24', note: 'rgba(255,255,255,0.15)' };
+    let uid = 0;
+    function getTimeStr(t) {
+      if (!t) return 'just now';
+      const mins = Math.floor((Date.now() - t) / 60000);
+      if (mins < 1) return 'just now';
+      if (mins < 60) return mins + ' min' + (mins > 1 ? 's' : '') + ' ago';
+      const hrs = Math.floor(mins / 60);
+      return hrs < 24 ? hrs + ' hr' + (hrs > 1 ? 's' : '') + ' ago' : Math.floor(hrs/24) + ' d ago';
+    }
+    let clusters = {
+      inbox: {
+        color: '#f87171', notes: []
+      }
+    };
+    let current = 'inbox', currentCat = 'all', lastDel = null, undoTimer = null;
+    let selectedIds = new Set();
+
+    // COPY
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        return navigator.clipboard.writeText(text).then(() => true).catch(() => execCopy(text));
+      return Promise.resolve(execCopy(text));
+    }
+    function execCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) { }
+      document.body.removeChild(ta); return ok;
+    }
+    function doCopy(btn, text) {
+      copyText(text).then(ok => {
+        const orig = btn.textContent;
+        btn.textContent = ok ? 'copied ✓' : 'failed'; btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+      });
+    }
+    function copyBlock(btn, text) {
+      copyText(text).then(ok => {
+        const orig = btn.textContent;
+        btn.textContent = ok ? 'COPIED ✓' : 'FAILED'; btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+      });
+    }
+
+    function copyImage(btn, n) {
+      const orig = btn.textContent;
+      if (!n.dataUrl) { btn.textContent = 'no data'; setTimeout(() => btn.textContent = orig, 1500); return; }
+      // convert dataUrl to blob then write to clipboard
+      fetch(n.dataUrl)
+        .then(r => r.blob())
+        .then(blob => {
+          const mimeType = blob.type || 'image/png';
+          if (navigator.clipboard && window.ClipboardItem) {
+            const item = new ClipboardItem({ [mimeType]: blob });
+            return navigator.clipboard.write([item]);
+          }
+          throw new Error('ClipboardItem not supported');
+        })
+        .then(() => {
+          btn.textContent = 'COPIED ✓'; btn.classList.add('ok');
+          setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+        })
+        .catch(() => {
+          // fallback: copy the dataUrl string at least
+          copyText(n.dataUrl).then(() => {
+            btn.textContent = 'copied url'; btn.classList.add('ok');
+            setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+          });
+        });
+    }
+
+    // RENDER
+    function renderAll() {
+      const t = document.getElementById('clusterTitle');
+      if (t) t.textContent = current;
+      renderTabs(); renderCats(); renderFeed();
+    }
+
+    function renderTabs() {
+      const el = document.getElementById('clusterTabs'); el.innerHTML = '';
+      Object.entries(clusters).forEach(([key, c]) => {
+        const tab = document.createElement('div');
+        tab.className = 'c-tab' + (key === current ? ' active' : '');
+        if (key === current) { tab.style.background = c.color; tab.style.color = '#1a1a1a'; }
+        tab.style.borderColor = key === current ? c.color : 'var(--border)';
+        const dot = document.createElement('div'); dot.className = 'c-dot';
+        dot.style.background = key === current ? 'rgba(0,0,0,0.25)' : c.color;
+        tab.appendChild(dot);
+        const lbl = document.createElement('span'); lbl.textContent = key; tab.appendChild(lbl);
+        if (key !== current) {
+          const x = document.createElement('span'); x.className = 'c-x'; x.textContent = '×';
+          x.onclick = e => { e.stopPropagation(); if (Object.keys(clusters).length > 1) { delete clusters[key]; if (current === key) current = Object.keys(clusters)[0]; renderAll(); } };
+          tab.appendChild(x);
+        }
+        tab.onclick = () => { current = key; currentCat = 'all'; renderAll(); };
+        el.appendChild(tab);
+      });
+      const add = document.createElement('div'); add.className = 'c-tab-add'; add.textContent = '+ new';
+      add.onclick = () => {
+        const tempKey = 'cluster ' + (Object.keys(clusters).length + 1);
+        clusters[tempKey] = { color: COLORS[Object.keys(clusters).length % COLORS.length], notes: [] };
+        current = tempKey; currentCat = 'all'; renderAll();
+        setTimeout(() => startRename(), 40);
+      };
+      el.appendChild(add);
+    }
+
+    function renderCats() {
+      const notes = clusters[current].notes;
+      const counts = { all: notes.length };
+      notes.forEach(n => { counts[n.type] = (counts[n.type] || 0) + 1; });
+      const el = document.getElementById('catRow'); el.innerHTML = '';
+      ['all', 'code', 'link', 'task', 'image', 'note'].forEach(cat => {
+        if (cat !== 'all' && !counts[cat]) return;
+        const count = counts[cat] || 0;
+        const nearFull = cat !== 'all' && count >= CAT_LIMIT - 3;
+        const isFull = cat !== 'all' && count >= CAT_LIMIT;
+        const p = document.createElement('div');
+        p.className = 'cat-pill' + (currentCat === cat ? ' active' : '');
+        p.textContent = cat + ' ' + count + (isFull ? ' ·split' : nearFull ? ' ·' + count + '/' + CAT_LIMIT : '');
+        if (isFull && currentCat !== cat) p.style.borderColor = '#f87171';
+        p.onclick = () => { currentCat = cat; renderCats(); renderFeed(); };
+        el.appendChild(p);
+      });
+    }
+
+    // BUILD ROW — DOM only, no innerHTML with user content
+    function buildRow(n, i) {
+      const row = document.createElement('div');
+      row.className = 'row' + (selectedIds.has(n.id) ? ' selected' : '');
+      row.style.borderLeftColor = TYPE_COLOR[n.type] || 'rgba(255,255,255,0.13)';
+      
+      const circ = document.createElement('div');
+      circ.className = 'sel-circle';
+      circ.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      circ.onclick = (e) => toggleSelect(n.id, e);
+      row.appendChild(circ);
+
+      if (i >= 8) row.style.animation = 'none';
+      if (n.type === 'task') buildTask(row, n);
+      else if (n.type === 'code') buildCode(row, n);
+      else if (n.type === 'link') buildLink(row, n);
+      else if (n.type === 'image') buildImage(row, n);
+      else buildNote(row, n);
+      return row;
+    }
+
+    function mkTag(label, color) {
+      const t = document.createElement('span'); t.className = 'tag'; t.textContent = label; t.style.color = color; return t;
+    }
+    function mkChev() {
+      const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      s.setAttribute('viewBox', '0 0 12 12'); s.setAttribute('class', 'chev');
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', 'M2 4l4 4 4-4'); s.appendChild(p); return s;
+    }
+    function mkIco(title, d, cls) {
+      const div = document.createElement('div'); div.className = 'ico' + (cls ? ' ' + cls : ''); div.title = title;
+      const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 15 15');
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); s.appendChild(p); div.appendChild(s); return div;
+    }
+    function mkPinIco(n) {
+      const ico = mkIco('pin', 'M5 1h5M7.5 1v5L5 9h5L7.5 6V1M7.5 9v5', n.pinned ? 'pin-on' : '');
+      ico.onclick = e => { e.stopPropagation(); togglePin(n.id); }; return ico;
+    }
+    function mkDelIco(n) {
+      const ico = mkIco('delete', 'M2 4h11M5 4V2h5v2M6 7v5M9 7v5M3 4l1 9h7l1-9', 'del');
+      ico.onclick = e => { e.stopPropagation(); deleteNote(n.id); }; return ico;
+    }
+    function mkCopyPill(text) {
+      const p = document.createElement('div'); p.className = 'cpill'; p.textContent = 'copy';
+      p.onclick = e => { e.stopPropagation(); doCopy(p, text); }; return p;
+    }
+    function mkHov(kids, n) {
+      const time = (n && n.time) ? n.time : Date.now();
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position: relative; display: flex; align-items: center; justify-content: flex-end; margin-left: auto; width: max-content;';
+      wrap.onclick = e => e.stopPropagation();
+      const ts = document.createElement('span');
+      ts.className = 'time-span';
+      ts.dataset.time = time;
+      ts.style.cssText = 'font-family: "Geist Mono", monospace; font-size: 11px; color: #5a5754; padding-right: 4px;';
+      ts.textContent = getTimeStr(time);
+      wrap.appendChild(ts);
+
+      const h = document.createElement('div'); h.className = 'hov'; h.onclick = e => e.stopPropagation();
+      kids.forEach(k => h.appendChild(k)); 
+      h.style.cssText = 'position: absolute; right: 0; padding-left: 6px; justify-content: flex-end; margin-left: 0;';
+      wrap.appendChild(h);
+      return wrap;
+    }
+    function mkPinDot() { const d = document.createElement('div'); d.className = 'pin-dot'; return d; }
+    function mkTop(onClick) {
+      const t = document.createElement('div'); t.className = 'row-top';
+      if (onClick) t.onclick = onClick; return t;
+    }
+    function toggleRowExp(top) {
+      const body = top.nextElementSibling;
+      const chev = top.querySelector('.chev');
+      if (!body) return;
+      const isOpen = body.classList.contains('open');
+
+      // close ALL other open rows first
+      document.querySelectorAll('.exp.open').forEach(el => {
+        el.classList.remove('open');
+        const c = el.previousElementSibling && el.previousElementSibling.querySelector('.chev');
+        if (c) c.classList.remove('open');
+      });
+
+      // if this one was closed, open it now
+      if (!isOpen) {
+        body.classList.add('open');
+        if (chev) chev.classList.add('open');
+      }
+    }
+
+    // VIRTUAL SCROLL — only render rows in/near viewport
+    const ROW_H = 42; // estimated row height px
+    let currentNotes = [];
+
+    function renderFeed() {
+      const feed = document.getElementById('feed');
+      feed.onscroll = null;
+      currentNotes = clusters[current].notes.filter(n => currentCat === 'all' || n.type === currentCat);
+      feed.innerHTML = '';
+      if (!currentNotes.length) {
+        const e = document.createElement('div'); e.className = 'empty';
+        e.innerHTML = '◦<br>paste anything to get started<br><span style="font-size:11px">links, code, images auto-detected</span>';
+        feed.appendChild(e); return;
+      }
+      // max 15 per category so just render all — no virtual scroll needed
+      currentNotes.forEach((n, i) => feed.appendChild(buildRow(n, i)));
+    }
+
+    function buildTask(row, n) {
+      const top = document.createElement('div');
+      top.style.cssText = 'padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; position: relative;';
+
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;';
+
+      const tag = mkTag('task', 'var(--red)');
+      tagRow.appendChild(tag);
+
+      const hovContainer = document.createElement('div');
+      hovContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      if (n.pinned) hovContainer.appendChild(mkPinDot());
+
+      const hovWrap = mkHov([mkDelIco(n)], n);
+      hovContainer.appendChild(hovWrap);
+
+      tagRow.appendChild(hovContainer);
+      top.appendChild(tagRow);
+
+      const contentRow = document.createElement('div');
+      contentRow.style.cssText = 'display: flex; align-items: flex-start; gap: 10px; margin-top: 2px;';
+
+      const box = document.createElement('div');
+      box.className = 'checkbox' + (n.done ? ' done' : '');
+      const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); sv.setAttribute('viewBox', '0 0 9 8');
+      const pp = document.createElementNS('http://www.w3.org/2000/svg', 'path'); pp.setAttribute('d', 'M1 4L3.5 6.5L8 1'); sv.appendChild(pp); box.appendChild(sv);
+      box.onclick = e => { e.stopPropagation(); toggleTask(n.id); }; 
+      contentRow.appendChild(box);
+
+      const txt = document.createElement('span'); 
+      txt.style.cssText = 'font-family: "Instrument Serif", serif; font-size: 20px; color: #f0ede8; line-height: 1.2; word-break: break-word;';
+      txt.textContent = n.content;
+      if (n.done) { txt.style.textDecoration = 'line-through'; txt.style.color = '#8a8680'; }
+      contentRow.appendChild(txt);
+
+      top.appendChild(contentRow);
+      row.appendChild(top);
+    }
+
+    function buildCode(row, n) {
+      const full = n.full || n.content;
+      const top = document.createElement('div');
+      top.style.cssText = 'padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; position: relative; cursor: pointer;';
+      top.onclick = () => toggleRowExp(top);
+      
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+      
+      const tag = mkTag('code', 'var(--purple)');
+      tagRow.appendChild(tag);
+
+      const hovContainer = document.createElement('div');
+      hovContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      if (n.pinned) hovContainer.appendChild(mkPinDot());
+      
+      const hovWrap = mkHov([mkPinIco(n), mkCopyPill(full), mkDelIco(n)], n);
+      hovContainer.appendChild(hovWrap);
+      
+      tagRow.appendChild(hovContainer);
+      top.appendChild(tagRow);
+
+      const txt = document.createElement('span'); 
+      txt.style.cssText = 'font-family: "Geist Mono", monospace; font-size: 13px; color: var(--purple); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; mix-blend-mode: plus-lighter; margin-top: 2px;';
+      txt.textContent = n.content;
+      top.appendChild(txt);
+
+      const chevWrap = document.createElement('div');
+      chevWrap.style.cssText = 'position: absolute; right: 14px; bottom: 12px; opacity: 0.4; transition: opacity 0.15s;';
+      chevWrap.appendChild(mkChev());
+      top.appendChild(chevWrap);
+
+      row.appendChild(top);
+
+      const exp = document.createElement('div'); exp.className = 'exp';
+      const cb = document.createElement('div'); cb.className = 'code-block'; cb.textContent = full; exp.appendChild(cb);
+      const foot = document.createElement('div'); foot.className = 'code-foot';
+      const lt = document.createElement('span'); lt.className = 'lang-tag'; lt.textContent = '· ' + (n.lang || 'js'); foot.appendChild(lt);
+      exp.appendChild(foot); row.appendChild(exp);
+    }
+
+    function buildLink(row, n) {
+      const href = n.url || (n.content.startsWith('http') ? n.content : 'https://' + n.content);
+      let domain = n.content;
+      try { domain = new URL(href).hostname.replace(/^www\./, ''); } catch (e) { }
+
+      const top = document.createElement('div');
+      top.style.cssText = 'padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; position: relative; cursor: default;';
+
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+
+      const tag = mkTag('link', '#60a5fa');
+      tagRow.appendChild(tag);
+
+      const hovContainer = document.createElement('div');
+      hovContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      if (n.pinned) hovContainer.appendChild(mkPinDot());
+      
+      const hovWrap = mkHov([mkPinIco(n), mkCopyPill(href), mkDelIco(n)], n);
+      hovContainer.appendChild(hovWrap);
+      
+      tagRow.appendChild(hovContainer);
+      top.appendChild(tagRow);
+
+      const a = document.createElement('a');
+      a.href = href; a.target = '_blank';
+      a.style.cssText = 'font-family: "Instrument Serif", serif; font-size: 18px; color: #60a5fa; text-decoration: none; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; line-height: 1.2; padding-bottom: 2px;';
+      a.textContent = domain;
+      a.onmouseover = () => a.style.textDecoration = 'underline';
+      a.onmouseout = () => a.style.textDecoration = 'none';
+      top.appendChild(a);
+
+      const fullUrl = document.createElement('div');
+      fullUrl.style.cssText = 'font-family: "Geist Mono", monospace; font-size: 11px; color: #8a8680; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; mix-blend-mode: plus-lighter; padding-top: 0px;';
+      const cleanUrl = href.replace(/^https?:\/\//, '');
+      fullUrl.textContent = cleanUrl;
+      top.appendChild(fullUrl);
+
+      const addNote = document.createElement('div');
+      addNote.style.cssText = 'font-family: "Instrument Serif", serif; font-style: italic; color: #4a4744; font-size: 15px; margin-top: 4px; cursor: text; transition: color 0.15s; letter-spacing: 0.1px; outline: none;';
+      addNote.textContent = n.sub ? n.sub : '+ add note';
+      addNote.onmouseover = () => { if (!n.sub && !addNote.isContentEditable) addNote.style.color = '#8a8680'; };
+      addNote.onmouseout = () => { if (!n.sub && !addNote.isContentEditable) addNote.style.color = '#5a5754'; };
+      addNote.onclick = (e) => {
+        if (addNote.isContentEditable) return;
+        e.stopPropagation();
+        addNote.contentEditable = 'true';
+        addNote.style.color = '#f0ede8';
+        addNote.style.fontStyle = 'normal';
+        addNote.style.fontFamily = '"Geist", sans-serif';
+        addNote.style.fontSize = '14px';
+        if (!n.sub) addNote.textContent = '';
+        addNote.focus();
+
+        const finish = () => {
+          addNote.contentEditable = 'false';
+          const val = addNote.textContent.trim();
+          if (val) {
+            n.sub = val;
+            addNote.textContent = val;
+            addNote.style.color = '#8a8680';
+          } else {
+            n.sub = null;
+            addNote.textContent = '+ add note';
+            addNote.style.color = '#5a5754';
+            addNote.style.fontStyle = 'italic';
+            addNote.style.fontFamily = '"Instrument Serif", serif';
+            addNote.style.fontSize = '17px';
+          }
+        };
+
+        addNote.onkeydown = (ke) => {
+          if (ke.key === 'Enter') {
+            ke.preventDefault();
+            addNote.blur();
+          }
+        };
+        addNote.onblur = finish;
+      };
+      // Format it beautifully if it's already an active note
+      if (n.sub) {
+        addNote.style.fontStyle = 'normal';
+        addNote.style.fontFamily = '"Geist", sans-serif';
+        addNote.style.fontSize = '14px';
+        addNote.style.color = '#8a8680';
+      }
+      top.appendChild(addNote);
+
+      row.appendChild(top);
+    }
+
+    function buildImage(row, n) {
+      const top = document.createElement('div');
+      top.style.cssText = 'padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; position: relative; cursor: pointer;';
+      top.onclick = () => toggleRowExp(top);
+      
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+      
+      const tag = mkTag('img', 'var(--amber)');
+      tagRow.appendChild(tag);
+
+      const hovContainer = document.createElement('div');
+      hovContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      if (n.pinned) hovContainer.appendChild(mkPinDot());
+      
+      const imgCopyPill = document.createElement('div'); imgCopyPill.className = 'cpill'; imgCopyPill.textContent = 'copy';
+      imgCopyPill.onclick = e => { e.stopPropagation(); copyImage(imgCopyPill, n); };
+      
+      const hovWrap = mkHov([mkPinIco(n), imgCopyPill, mkDelIco(n)], n);
+      hovContainer.appendChild(hovWrap);
+      
+      tagRow.appendChild(hovContainer);
+      top.appendChild(tagRow);
+
+      const nm = document.createElement('div');
+      nm.style.cssText = 'font-family: "Geist Mono", monospace; font-size: 13px; color: #f0ede8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; mix-blend-mode: plus-lighter;';
+      nm.textContent = n.content; 
+      top.appendChild(nm);
+
+      const chevWrap = document.createElement('div');
+      chevWrap.style.cssText = 'position: absolute; right: 14px; bottom: 12px; opacity: 0.4; transition: opacity 0.15s;';
+      chevWrap.appendChild(mkChev());
+      top.appendChild(chevWrap);
+
+      row.appendChild(top);
+
+      const exp = document.createElement('div'); exp.className = 'exp';
+      const pw = document.createElement('div'); pw.className = 'img-wrap';
+      if (n.dataUrl) { const img = document.createElement('img'); img.src = n.dataUrl; img.alt = n.content; pw.appendChild(img); }
+      else pw.innerHTML = '<div style="height:90px;display:flex;align-items:center;justify-content:center;opacity:.3"><svg width="28" height="28" viewBox="0 0 32 32" fill="none"><rect x="2" y="4" width="28" height="24" rx="4" stroke="white" stroke-width="1.4"/><circle cx="10" cy="12" r="2.5" stroke="white" stroke-width="1.4"/><path d="M2 22l7-7 5 5 4-4 8 8" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg></div>';
+      exp.appendChild(pw);
+      const foot = document.createElement('div'); foot.className = 'code-foot';
+      const cpBtn = document.createElement('div'); cpBtn.className = 'copy-btn';
+      cpBtn.textContent = n.dataUrl ? 'COPY IMAGE' : 'NO IMAGE DATA';
+      cpBtn.onclick = () => { if (n.dataUrl) copyImage(cpBtn, n); };
+      foot.appendChild(cpBtn);
+      const lt = document.createElement('span'); lt.className = 'lang-tag'; lt.textContent = '· ' + (n.content.split('.').pop() || 'img'); foot.appendChild(lt);
+      exp.appendChild(foot); row.appendChild(exp);
+    }
+
+    function buildNote(row, n) {
+      const top = document.createElement('div');
+      top.style.cssText = 'padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; position: relative; cursor: pointer;';
+      top.onclick = () => toggleRowExp(top);
+      
+      const tagRow = document.createElement('div');
+      tagRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between;';
+      
+      const tag = mkTag('note', 'var(--text3)');
+      tagRow.appendChild(tag);
+
+      const hovContainer = document.createElement('div');
+      hovContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+      if (n.pinned) hovContainer.appendChild(mkPinDot());
+      
+      const hovWrap = mkHov([mkPinIco(n), mkCopyPill(n.content), mkDelIco(n)], n);
+      hovContainer.appendChild(hovWrap);
+      
+      tagRow.appendChild(hovContainer);
+      top.appendChild(tagRow);
+
+      const txt = document.createElement('span'); 
+      txt.style.cssText = 'font-family: "Geist", sans-serif; font-size: 14px; color: #f0ede8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;';
+      txt.textContent = n.content;
+      top.appendChild(txt);
+
+      const chevWrap = document.createElement('div');
+      chevWrap.style.cssText = 'position: absolute; right: 14px; bottom: 12px; opacity: 0.4; transition: opacity 0.15s;';
+      chevWrap.appendChild(mkChev());
+      top.appendChild(chevWrap);
+
+      row.appendChild(top);
+
+      const exp = document.createElement('div'); exp.className = 'exp';
+      const full = document.createElement('div'); full.className = 'note-full'; full.textContent = n.content;
+      exp.appendChild(full); row.appendChild(exp);
+    }
+
+    // ACTIONS
+    function toggleTask(id) {
+      const n = clusters[current].notes.find(x => x.id === id);
+      if (n) { n.done = !n.done; renderCats(); renderFeed(); }
+    }
+    function togglePin(id) {
+      const notes = clusters[current].notes; const idx = notes.findIndex(x => x.id === id); if (idx < 0) return;
+      const [n] = notes.splice(idx, 1); n.pinned = !n.pinned; n.pinned ? notes.unshift(n) : notes.push(n); renderFeed();
+    }
+    function deleteNote(id) {
+      const notes = clusters[current].notes; const idx = notes.findIndex(x => x.id === id); if (idx < 0) return;
+      lastDel = { note: notes[idx], cluster: current, idx }; notes.splice(idx, 1); renderCats(); renderFeed(); showUndo();
+    }
+    function showUndo() {
+      const bar = document.getElementById('undoBar'), fill = document.getElementById('undoFill');
+      bar.classList.remove('hiding'); bar.classList.add('show');
+      fill.style.transition = 'none'; fill.style.width = '100%';
+      requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.transition = 'width 5s linear'; fill.style.width = '0%'; }));
+      if (undoTimer) clearTimeout(undoTimer);
+      undoTimer = setTimeout(hideUndo, 5000);
+    }
+    function hideUndo() {
+      const bar = document.getElementById('undoBar');
+      bar.classList.add('hiding');
+      setTimeout(() => { bar.classList.remove('show', 'hiding'); lastDel = null; }, 240);
+    }
+    function undoDelete() {
+      if (!lastDel) return;
+      clusters[lastDel.cluster].notes.splice(lastDel.idx, 0, lastDel.note);
+      clearTimeout(undoTimer); hideUndo(); renderCats(); renderFeed();
+    }
+
+    // RENAME
+    function startRename(e) {
+      const wrap = document.getElementById('clusterNameWrap');
+      if (wrap.querySelector('.title-input')) return;
+      const span = document.getElementById('clusterTitle');
+      const pencil = wrap.querySelector('svg');
+      const input = document.createElement('input');
+      input.className = 'title-input'; input.value = current;
+      wrap.replaceChild(input, span);
+      if (pencil) pencil.style.opacity = '0';
+      input.focus(); input.select();
+      let committed = false;
+      function commit() {
+        if (committed) return; committed = true;
+        const val = input.value.trim().toLowerCase();
+        if (val && val !== current && !clusters[val]) {
+          clusters[val] = clusters[current]; delete clusters[current]; current = val;
+        }
+        const newSpan = document.createElement('span'); newSpan.id = 'clusterTitle'; newSpan.textContent = current;
+        if (wrap.contains(input)) wrap.replaceChild(newSpan, input); else wrap.insertBefore(newSpan, pencil);
+        if (pencil) pencil.style.opacity = '';
+        renderAll();
+      }
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { input.value = current; commit(); } });
+      input.addEventListener('blur', commit);
+      input.addEventListener('input', () => { input.style.width = Math.max(80, input.value.length * 15) + 'px'; });
+    }
+
+    // PASTE & ADD
+    function detectType(text) {
+      if (/^https?:\/\/|^www\.|\.com\/|\.io\/|\.dev\/|\.org\//.test(text)) return 'link';
+      if (/^(const |let |var |function |import |export |class |npm |npx |git |cd |pip |python |\$ )/.test(text)) return 'code';
+      if (/\n.*\n/.test(text) && text.length > 60) return 'code';
+      return 'note';
+    }
+    function guessLang(t) {
+      if (/^npm |^npx |^git |^cd |^\$ /.test(t)) return 'sh';
+      if (/import|export|const|=>/.test(t)) return 'js';
+      if (/def |print\(/.test(t)) return 'py';
+      return 'js';
+    }
+    document.addEventListener('paste', e => {
+      const input = document.getElementById('addInput');
+      if (document.activeElement === input) return;
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const note = { id: ++uid, type: 'image', content: file.name || 'pasted image', dataUrl: ev.target.result, pinned: false, time: Date.now() };
+            const existing = clusters[current].notes.filter(n => n.type === 'image').length;
+            if (existing >= CAT_LIMIT) {
+              const ov = findOrCreateOverflow(current, 'image');
+              clusters[ov].notes.push(note); showToast('moved to ' + ov); renderTabs();
+            } else {
+              clusters[current].notes.push(note);
+            }
+            currentCat = 'image';
+            renderCats(); renderFeed(); flashLast();
+          };
+          reader.readAsDataURL(file); return;
+        }
+      }
+      const text = e.clipboardData.getData('text').trim();
+      if (!text) return; e.preventDefault(); addNote(text, null);
+    });
+    const CAT_LIMIT = 10000; // max notes per type per cluster before auto-split
+
+    function addNote(text, forcedType) {
+      const type = forcedType === 'task' ? 'task' : detectType(text);
+      const note = { id: ++uid, type, content: text, pinned: false, time: Date.now() };
+      if (type === 'task') note.done = false;
+      if (type === 'code') { note.full = text; note.lang = guessLang(text); note.content = text.split('\n')[0] || text; }
+      if (type === 'link') note.url = text.startsWith('http') ? text : 'https://' + text;
+
+      // count how many of this type already exist in current cluster
+      const existing = clusters[current].notes.filter(n => n.type === type).length;
+
+      if (existing >= CAT_LIMIT) {
+        // find or create an overflow cluster for this type
+        const overflowName = findOrCreateOverflow(current, type);
+        clusters[overflowName].notes.push(note);
+        // show a quick toast so user knows where it went
+        showToast('moved to ' + overflowName);
+        renderTabs();
+      } else {
+        clusters[current].notes.push(note);
+      }
+
+      currentCat = type;
+      renderCats(); renderFeed();
+      const feed = document.getElementById('feed'); feed.scrollTop = feed.scrollHeight;
+      flashLast();
+    }
+
+    function findOrCreateOverflow(baseName, type) {
+      // look for an existing overflow cluster that still has room
+      let n = 2;
+      while (true) {
+        const candidate = baseName + ' ' + n;
+        if (clusters[candidate]) {
+          const count = clusters[candidate].notes.filter(x => x.type === type).length;
+          if (count < CAT_LIMIT) return candidate;
+          n++;
+        } else {
+          // create it
+          const baseColor = clusters[baseName] ? clusters[baseName].color : '#a78bfa';
+          clusters[candidate] = { color: baseColor, notes: [] };
+          return candidate;
+        }
+      }
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#2e2e2e;color:#e8e5e0;font-size:11px;font-family:Geist Mono,monospace;padding:5px 14px;border-radius:20px;border:0.5px solid rgba(255,255,255,0.13);z-index:999;transition:opacity .3s;white-space:nowrap;';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => toast.style.opacity = '0', 2000);
+    }
+    
+    function flashLast() {
+      setTimeout(() => {
+        const rows = document.querySelectorAll('.row'); const last = rows[rows.length - 1];
+        if (last) { last.style.background = 'rgba(200,240,96,0.07)'; setTimeout(() => last.style.background = '', 700); }
+      }, 40);
+    }
+
+    // MULTI-SELECT LOGIC
+    function toggleSelect(id, e) {
+      if (e) e.stopPropagation();
+      if (selectedIds.has(id)) selectedIds.delete(id);
+      else selectedIds.add(id);
+      updateSelUI();
+      renderFeed();
+    }
+
+    function updateSelUI() {
+      const bar = document.getElementById('selBar');
+      const count = document.getElementById('selCount');
+      if (selectedIds.size > 0) {
+        bar.classList.add('active');
+        count.textContent = selectedIds.size + ' selected';
+      } else {
+        bar.classList.remove('active');
+      }
+    }
+
+    function clearSelect() {
+      selectedIds.clear();
+      updateSelUI();
+      renderFeed();
+    }
+
+    function bulkDelete() {
+      const notes = clusters[current].notes;
+      const idsToDelete = Array.from(selectedIds);
+      idsToDelete.forEach(id => {
+        const idx = notes.findIndex(x => x.id === id);
+        if (idx >= 0) notes.splice(idx, 1);
+      });
+      clearSelect();
+      renderCats();
+      renderFeed();
+      showToast('Deleted ' + idsToDelete.length + ' items');
+    }
+
+    async function bulkCopy() {
+      const notes = clusters[current].notes;
+      const selected = notes.filter(n => selectedIds.has(n.id));
+      
+      const images = selected.filter(n => n.type === 'image' && n.dataUrl);
+      const others = selected.filter(n => n.type !== 'image');
+
+      let textContent = others.map(n => {
+        if (n.type === 'link') return n.url;
+        if (n.type === 'code') return n.full || n.content;
+        return n.content;
+      }).join('\n\n');
+
+      if (images.length > 0) {
+        // Send to main process for native multi-file copy
+        if (window.electronAPI) {
+          window.electronAPI.copyFiles(images.map(img => ({ name: img.content || 'image.png', dataUrl: img.dataUrl })));
+        }
+        if (textContent) {
+          await copyText(textContent);
+          showToast('Copied text + ' + images.length + ' images');
+        } else {
+          showToast('Copied ' + images.length + ' images');
+        }
+      } else if (textContent) {
+        await copyText(textContent);
+        showToast('Copied ' + selected.length + ' items');
+      }
+    }
+
+    function quickAdd(type) {
+      const input = document.getElementById('addInput'); const text = input.value.trim();
+      if (!text) return; input.value = ''; addNote(text, type);
+    }
+    function onKey(e) {
+      if (e.key === 'Enter') quickAdd('note');
+      if (e.key === 'Escape') {
+        document.getElementById('addInput').blur();
+        if (window.electronAPI) window.electronAPI.hide();
+      }
+    }
+    window.addEventListener('load', () => {
+      renderAll(); 
+      window.focus();
+      const app = document.querySelector('.app');
+      if (window.electronAPI) {
+        const ro = new ResizeObserver(() => {
+          window.electronAPI.resize(app.scrollHeight);
+        });
+        ro.observe(app);
+      }
+    });
+
+    function copyImage(btn, n) {
+      const orig = btn.textContent;
+      if (!n.dataUrl) { btn.textContent = 'no data'; setTimeout(() => btn.textContent = orig, 1500); return; }
+      if (window.electronAPI) {
+        window.electronAPI.copyImage(n.dataUrl);
+        btn.textContent = 'COPIED ✓'; btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+      } else {
+        fetch(n.dataUrl).then(r => r.blob()).then(blob => {
+          if (navigator.clipboard && window.ClipboardItem) {
+            return navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+          }
+        }).then(() => {
+          btn.textContent = 'COPIED ✓'; btn.classList.add('ok');
+          setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1600);
+        }).catch(() => { btn.textContent = 'failed'; setTimeout(() => btn.textContent = orig, 1500); });
+      }
+    }
+
+    setInterval(() => {
+      document.querySelectorAll('.time-span').forEach(el => {
+        if (el.dataset.time) el.textContent = getTimeStr(parseInt(el.dataset.time));
+      });
+    }, 30000);
+  </script>
+</body>
+
+</html>
