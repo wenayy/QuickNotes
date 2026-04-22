@@ -70,6 +70,7 @@ mb.on('ready', () => {
   globalShortcut.register('Control+Space', () => {
     if (mb.window && mb.window.isVisible()) {
       windowLocked = false   // unlock when manually closing
+      if (mb.window) mb.window.webContents.send('lock-reset')
       mb.hideWindow()
     } else {
       mb.showWindow()

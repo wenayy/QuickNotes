@@ -1005,8 +1005,10 @@
       if (window.electronAPI) window.electronAPI.setLock(false);
     }
 
-    // every time the window becomes visible, reset lock to default (unlocked)
-    window.addEventListener('focus', resetLock);
+    // sync lock state if main process resets it (e.g. via shortcut)
+    if (window.electronAPI && window.electronAPI.onLockReset) {
+      window.electronAPI.onLockReset(() => resetLock());
+    }
 
     function toggleLock() {
       isLocked = !isLocked;
