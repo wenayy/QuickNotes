@@ -1826,6 +1826,14 @@
       loadData();
       renderAll(); 
       window.focus();
+      
+      // Update shortcut hint based on platform
+      const hint = document.querySelector('#shortcutHint .kbd');
+      if (hint) {
+        const isWin = navigator.platform.toLowerCase().includes('win');
+        hint.textContent = isWin ? 'Ctrl+Space' : '⌃Space';
+      }
+
       const app = document.querySelector('.app');
       if (window.electronAPI) {
         const ro = new ResizeObserver(() => {

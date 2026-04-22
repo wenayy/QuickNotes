@@ -1330,23 +1330,49 @@
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // ── SCROLL REVEAL ─────────────────────────────────────
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          // start terminal when it comes into view
-          if (e.target.id === 'terminal') {
-            setTimeout(runTerminal, 300);
-            observer.unobserve(e.target);
-          }
-        }
-      });
-    }, { threshold: 0.15 });
+    // OS Detection & UI Update
+    function updateOS() {
+      const isWin = navigator.platform.toLowerCase().includes('win');
+      const hints = document.querySelectorAll('.kbd, .step-title, .hero-eyebrow, .install-hint');
+      const prompts = document.querySelectorAll('.t-prompt, .prompt');
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-    document.querySelectorAll('.step-card').forEach(el => observer.observe(el));
-    observer.observe(document.getElementById('terminal'));
+      hints.forEach(el => {
+        if (el.textContent.includes('⌃Space')) el.textContent = el.textContent.replace('⌃Space', isWin ? 'Ctrl+Space' : '⌃Space');
+        if (el.textContent.includes('⌃ Space')) el.textContent = el.textContent.replace('⌃ Space', isWin ? 'Ctrl + Space' : '⌃ Space');
+      });
+
+      prompts.forEach(el => {
+        if (isWin && el.textContent === '~') el.textContent = 'C:\\>';
+        if (isWin && el.textContent.trim() === '$') el.textContent = '>';
+      });
+
+      if (isWin) {
+        const title = document.querySelector('.terminal-title');
+        if (title) title.textContent = 'Command Prompt';
+        document.querySelectorAll('.t-dot').forEach(d => d.style.display = 'none');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      updateOS();
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            // start terminal when it comes into view
+            if (e.target.id === 'terminal') {
+              setTimeout(runTerminal, 300);
+              observer.unobserve(e.target);
+            }
+          }
+        });
+      }, { threshold: 0.15 });
+
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+      document.querySelectorAll('.step-card').forEach(el => observer.observe(el));
+      const term = document.getElementById('terminal');
+      if (term) observer.observe(term);
+    });
   </script>
 </body>
 
