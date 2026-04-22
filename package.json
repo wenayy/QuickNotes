@@ -1,7 +1,10 @@
 {
-  "name": "quick-notes",
-  "version": "1.0.0",
-  "description": "A minimal menubar notes app built with Electron.",
+  "name": "cachetray",
+  "version": "1.0.2",
+  "description": "CacheTray: Focus, distilled into one window.",
+  "bin": {
+    "cachetray": "bin/install.js"
+  },
   "main": "main.js",
   "scripts": {
     "start": "electron .",

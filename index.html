@@ -860,6 +860,70 @@
     .link-full a:hover {
       text-decoration: underline;
     }
+
+    /* LOCK BUTTON */
+    .lock-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, color .15s;
+      color: #4a4744;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .lock-btn:hover {
+      background: #242424;
+      color: #8a8680;
+    }
+
+    .lock-btn.locked {
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.08);
+    }
+
+    .lock-btn.locked:hover {
+      background: rgba(251, 191, 36, 0.14);
+    }
+
+    /* when locked, show a subtle amber top border on the window */
+    .app.locked {
+      border-top: 1.5px solid rgba(251, 191, 36, 0.4);
+    }
+
+    /* locked badge that appears below the shortcut hint */
+    .locked-badge {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      color: #fbbf24;
+      letter-spacing: 0.3px;
+    }
+
+    .locked-badge.show {
+      display: flex;
+    }
+
+    .lock-pulse {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulseDot 2s ease infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
   </style>
 </head>
 
@@ -868,14 +932,24 @@
     <div class="header" style="-webkit-app-region: drag;">
       <div class="title-row">
         <div class="cluster-name no-drag" id="clusterNameWrap" onclick="startRename(event)">
-          <span id="clusterTitle">inbox</span>
+          <span id="clusterTitle">CacheTray</span>
           <svg width="12" height="12" viewBox="0 0 12 12">
             <path d="M2 9l1.5-1.5 5-5 1.5 1.5-5 5L2 9z" />
           </svg>
         </div>
-        <div class="shortcut-hint no-drag"><span class="kbd">⌃Space</span><span>toggle</span></div>
+        <div style="display:flex;align-items:center;gap:8px;" class="no-drag">
+          <div class="shortcut-hint" id="shortcutHint"><span class="kbd">⌃Space</span><span>toggle</span></div>
+          <button class="lock-btn" id="lockBtn" onclick="toggleLock()" title="Pin window open">
+            <svg id="lockIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="cluster-tabs no-drag" id="clusterTabs"></div>
+      <!-- locked badge -->
+      <div class="locked-badge" id="lockedBadge"><div class="lock-pulse"></div>pinned open · ⌃Space to close</div>
     </div>
     <div class="cat-row no-drag" id="catRow"></div>
     <div class="feed no-drag" id="feed"></div>
@@ -913,6 +987,30 @@
     const COLORS = ['#f87171', '#fbbf24', '#34d399', '#a78bfa', '#60a5fa', '#f472b6'];
     const TYPE_COLOR = { code: '#a78bfa', link: '#60a5fa', task: '#f87171', image: '#fbbf24', note: 'rgba(255,255,255,0.15)' };
     let uid = 0;
+
+    // ── LOCK / PIN WINDOW ────────────────────────────────────
+    let isLocked = false;
+    function toggleLock() {
+      isLocked = !isLocked;
+      const btn = document.getElementById('lockBtn');
+      const app = document.querySelector('.app');
+      const badge = document.getElementById('lockedBadge');
+      const icon = document.getElementById('lockIcon');
+
+      btn.classList.toggle('locked', isLocked);
+      app.classList.toggle('locked', isLocked);
+      badge.classList.toggle('show', isLocked);
+
+      // swap icon: open lock when locked, closed lock when not
+      if (isLocked) {
+        icon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>`;
+      } else {
+        icon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>`;
+      }
+
+      // tell main process whether to ignore focus-lost
+      if (window.electronAPI) window.electronAPI.setLock(isLocked);
+    }
     function getTimeStr(t) {
       if (!t) return 'just now';
       const mins = Math.floor((Date.now() - t) / 60000);
@@ -928,6 +1026,47 @@
     };
     let current = 'inbox', currentCat = 'all', lastDel = null, undoTimer = null;
     let selectedIds = new Set();
+
+    // PERSISTENCE
+    const EXPIRY_MS = 3 * 24 * 60 * 60 * 1000; // 3 Days
+
+    function saveData() {
+      const data = {
+        clusters,
+        uid,
+        current,
+        currentCat
+      };
+      localStorage.setItem('quicknotes_v1', JSON.stringify(data));
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem('quicknotes_v1');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          clusters = parsed.clusters;
+          uid = parsed.uid || 0;
+          current = parsed.current || 'inbox';
+          currentCat = parsed.currentCat || 'all';
+          cleanup();
+        } catch (e) { console.error('Load failed', e); }
+      }
+    }
+
+    function cleanup() {
+      const now = Date.now();
+      let cleaned = 0;
+      for (let c in clusters) {
+        const originalCount = clusters[c].notes.length;
+        clusters[c].notes = clusters[c].notes.filter(n => (now - n.time) < EXPIRY_MS);
+        cleaned += (originalCount - clusters[c].notes.length);
+      }
+      if (cleaned > 0) {
+        console.log(`Cleaned up ${cleaned} expired items.`);
+        saveData();
+      }
+    }
 
     // COPY
     function copyText(text) {
@@ -1014,7 +1153,9 @@
       add.onclick = () => {
         const tempKey = 'cluster ' + (Object.keys(clusters).length + 1);
         clusters[tempKey] = { color: COLORS[Object.keys(clusters).length % COLORS.length], notes: [] };
-        current = tempKey; currentCat = 'all'; renderAll();
+        current = tempKey; currentCat = 'all'; 
+        saveData();
+        renderAll();
         setTimeout(() => startRename(), 40);
       };
       el.appendChild(add);
@@ -1296,6 +1437,7 @@
             addNote.style.fontFamily = '"Instrument Serif", serif';
             addNote.style.fontSize = '17px';
           }
+          saveData();
         };
 
         addNote.onkeydown = (ke) => {
@@ -1409,15 +1551,19 @@
     // ACTIONS
     function toggleTask(id) {
       const n = clusters[current].notes.find(x => x.id === id);
-      if (n) { n.done = !n.done; renderCats(); renderFeed(); }
+      if (n) { n.done = !n.done; saveData(); renderCats(); renderFeed(); }
     }
     function togglePin(id) {
       const notes = clusters[current].notes; const idx = notes.findIndex(x => x.id === id); if (idx < 0) return;
-      const [n] = notes.splice(idx, 1); n.pinned = !n.pinned; n.pinned ? notes.unshift(n) : notes.push(n); renderFeed();
+      const [n] = notes.splice(idx, 1); n.pinned = !n.pinned; n.pinned ? notes.unshift(n) : notes.push(n); 
+      saveData();
+      renderFeed();
     }
     function deleteNote(id) {
       const notes = clusters[current].notes; const idx = notes.findIndex(x => x.id === id); if (idx < 0) return;
-      lastDel = { note: notes[idx], cluster: current, idx }; notes.splice(idx, 1); renderCats(); renderFeed(); showUndo();
+      lastDel = { note: notes[idx], cluster: current, idx }; notes.splice(idx, 1); 
+      saveData();
+      renderCats(); renderFeed(); showUndo();
     }
     function showUndo() {
       const bar = document.getElementById('undoBar'), fill = document.getElementById('undoFill');
@@ -1435,6 +1581,8 @@
     function undoDelete() {
       if (!lastDel) return;
       clusters[lastDel.cluster].notes.splice(lastDel.idx, 0, lastDel.note);
+      lastDel = null;
+      saveData();
       clearTimeout(undoTimer); hideUndo(); renderCats(); renderFeed();
     }
 
@@ -1493,12 +1641,12 @@
             const existing = clusters[current].notes.filter(n => n.type === 'image').length;
             if (existing >= CAT_LIMIT) {
               const ov = findOrCreateOverflow(current, 'image');
-              clusters[ov].notes.push(note); showToast('moved to ' + ov); renderTabs();
+              clusters[ov].notes.unshift(note); showToast('moved to ' + ov); renderTabs();
             } else {
-              clusters[current].notes.push(note);
+              clusters[current].notes.unshift(note);
             }
             currentCat = 'image';
-            renderCats(); renderFeed(); flashLast();
+            renderCats(); renderFeed(); flashFirst();
           };
           reader.readAsDataURL(file); return;
         }
@@ -1521,18 +1669,19 @@
       if (existing >= CAT_LIMIT) {
         // find or create an overflow cluster for this type
         const overflowName = findOrCreateOverflow(current, type);
-        clusters[overflowName].notes.push(note);
+        clusters[overflowName].notes.unshift(note);
         // show a quick toast so user knows where it went
         showToast('moved to ' + overflowName);
         renderTabs();
       } else {
-        clusters[current].notes.push(note);
+        clusters[current].notes.unshift(note);
       }
 
       currentCat = type;
       renderCats(); renderFeed();
-      const feed = document.getElementById('feed'); feed.scrollTop = feed.scrollHeight;
-      flashLast();
+      saveData();
+      const feed = document.getElementById('feed'); feed.scrollTop = 0;
+      flashFirst();
     }
 
     function findOrCreateOverflow(baseName, type) {
@@ -1567,10 +1716,10 @@
       toast._t = setTimeout(() => toast.style.opacity = '0', 2000);
     }
     
-    function flashLast() {
+    function flashFirst() {
       setTimeout(() => {
-        const rows = document.querySelectorAll('.row'); const last = rows[rows.length - 1];
-        if (last) { last.style.background = 'rgba(200,240,96,0.07)'; setTimeout(() => last.style.background = '', 700); }
+        const rows = document.querySelectorAll('.row'); const first = rows[0];
+        if (first) { first.style.background = 'rgba(200,240,96,0.07)'; setTimeout(() => first.style.background = '', 700); }
       }, 40);
     }
 
@@ -1610,6 +1759,7 @@
       clearSelect();
       renderCats();
       renderFeed();
+      saveData();
       showToast('Deleted ' + idsToDelete.length + ' items');
     }
 
@@ -1655,6 +1805,7 @@
       }
     }
     window.addEventListener('load', () => {
+      loadData();
       renderAll(); 
       window.focus();
       const app = document.querySelector('.app');

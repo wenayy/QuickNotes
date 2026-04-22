@@ -6,8 +6,10 @@ const os = require('os')
 
 // must be called before app ready
 app.whenReady().then(() => {
-  // hide dock icon — this is a menu bar only app
-  if (app.dock) app.dock.hide()
+  // hide dock icon — only on macOS
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.hide()
+  }
 })
 
 const mb = menubar({
@@ -16,13 +18,16 @@ const mb = menubar({
   preloadWindow: true,
   showOnAllWorkspaces: true,
   activateWithApp: false,
-  windowPosition: 'topRight',
+  windowPosition: process.platform === 'darwin' ? 'topRight' : 'trayBottomCenter',
   browserWindow: {
     width: 420,
     height: 600,
     resizable: false,
     frame: false,
     transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -34,21 +39,47 @@ const mb = menubar({
 mb.on('ready', () => {
 
   // hide dock again after ready just to be sure
-  if (app.dock) app.dock.hide()
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.hide()
+  }
 
   app.setLoginItemSettings({ openAtLogin: true })
 
-  // clicking outside closes the popup
+  let windowLocked = false
+
+  // clicking outside closes the popup (unless window is locked/pinned)
   mb.on('focus-lost', () => {
-    mb.hideWindow()
+    if (!windowLocked) mb.hideWindow()
   })
 
-  // global shortcut — works from any app including Chrome
+  // after every show, ensure the window is on top and focused
+  mb.on('after-show', () => {
+    if (mb.window) {
+      mb.window.setAlwaysOnTop(true, 'pop-up-menu', 1)
+      mb.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+      mb.window.focus()
+    }
+  })
+
+  // lock/unlock from renderer
+  ipcMain.on('set-lock', (event, locked) => {
+    windowLocked = locked
+  })
+
+  // global shortcut — toggle; always hides even if locked, then clears lock
   globalShortcut.register('Control+Space', () => {
     if (mb.window && mb.window.isVisible()) {
+      windowLocked = false   // unlock when manually closing
       mb.hideWindow()
     } else {
       mb.showWindow()
+      // ensure the window stays on top and gets focus
+      if (mb.window) {
+        mb.window.setAlwaysOnTop(true, 'pop-up-menu', 1)
+        mb.window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+        mb.window.focus()
+        mb.window.webContents.focus()
+      }
     }
   })
 
