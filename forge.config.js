@@ -2,7 +2,7 @@ module.exports = {
   packagerConfig: {
     name: 'CacheTray',
     executableName: 'cachetray',
-    icon: './assets/icon', // Electron-forge handles .icns, .ico based on platform
+    icon: './assets/icon', // Electron-forge handles .icns / .ico automatically
     asar: true,
   },
   rebuildConfig: {},
@@ -18,12 +18,12 @@ module.exports = {
         icon: './assets/icon.png',
       },
     },
-    {
+    // Only load squirrel on Windows to avoid module resolution errors on Mac
+    process.platform === 'win32' && {
       name: '@electron-forge/maker-squirrel',
-      platforms: ['win32'],
       config: {
         name: 'cachetray',
       },
     },
-  ],
+  ].filter(Boolean),
 };

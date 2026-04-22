@@ -1,6 +1,6 @@
 {
   "name": "cachetray",
-  "version": "1.0.6",
+  "version": "1.1.1",
   "description": "CacheTray: Focus, distilled into one window.",
   "bin": {
     "cachetray": "bin/install.js"
@@ -24,7 +24,10 @@
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-wix": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
-    "electron": "^30.0.1"
+    "electron": "^30.0.1",
+    "electron-icon-builder": "^2.0.1"
   }
 }
