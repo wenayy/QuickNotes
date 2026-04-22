@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
 
     strategy:
       matrix:
@@ -35,8 +37,7 @@ jobs:
         with:
           files: |
             out/make/**/*.dmg
-            out/make/**/*.zip
             out/make/**/*.exe
-            out/make/squirrel.windows/x64/*.exe
+            out/make/**/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
