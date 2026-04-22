@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 REPO_URL="https://github.com/wenayy/QuickNotes.git"
-INSTALL_DIR="$HOME/.bolt-app"
+INSTALL_DIR="$HOME/.cachetray"
 
 echo "⚡️ Installing CacheTray..."
 
@@ -26,19 +26,21 @@ fi
 if [ -d "$INSTALL_DIR" ]; then
     echo "🔄 Updating existing installation..."
     cd "$INSTALL_DIR"
-    git pull origin main
+    git pull origin main --quiet
 else
     echo "📥 Cloning repository..."
-    git clone "$REPO_URL" "$INSTALL_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR" --quiet
     cd "$INSTALL_DIR"
 fi
 
 # Install dependencies
-echo "📦 Installing dependencies..."
-npm install --silent
+echo "📦 Installing dependencies (may take a moment)..."
+npm install --no-audit --no-fund
 
 # Run
 echo "🚀 Launching CacheTray..."
 npm start &
 
-echo "✅ CacheTray is ready! Use Option + Space to toggle."
+echo ""
+echo "✅ CacheTray is ready! Use Control + Space to toggle."
+echo "You can now close this terminal."
