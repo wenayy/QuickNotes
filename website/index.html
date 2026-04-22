@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CacheTray — your menubar memory</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #faf7f2;
+      --bg-2: #f3ede3;
+      --bg-3: #e8dfd0;
+      --text: #1a1612;
+      --text-2: #3d3730;
+      --text-3: #7a6f64;
+      --text-4: #b8ad9e;
+      --amber: #c8860a;
+      --amber-2: #f0a830;
+      --green: #2d6a4f;
+      --green-2: #52b788;
+      --red: #c0392b;
+      --border: var(--bg-3);
+      --glass-bg: rgba(255, 255, 255, 0.4);
+      --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f0d0b;
+      --bg-2: #1a1816;
+      --bg-3: #2d2a28;
+      --text: #f0edea;
+      --text-2: #d1cbc4;
+      --text-3: #a39b94;
+      --text-4: #6b635d;
+      --border: #242220;
+      --amber: #f0a830;
+      --amber-2: #ffcc66;
+      --glass-bg: rgba(26, 22, 18, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.05);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Crimson Pro', serif;
+      font-size: 19px;
+      line-height: 1.7;
+      overflow-x: hidden;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    /* premium glassmorphism utility */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+    }
+
+    /* grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.6;
+    }
+
+    /* NAV */
+    nav {
+      padding: 20px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: var(--bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.4s ease;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Lora', serif;
+      font-size: 18px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-svg {
+      width: 24px;
+      height: 24px;
+      transition: transform .3s ease;
+    }
+
+    .nav-logo:hover .logo-svg {
+      transform: translateY(-2px);
+    }
+
+    .logo-tray {
+      fill: none;
+      stroke: var(--amber);
+      stroke-width: 2;
+      stroke-linecap: round;
+      animation: trayFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes trayFloat {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-2px);
+      }
+    }
+
+    .nav-logo .cache {
+      font-weight: 300;
+      color: var(--text-3);
+    }
+
+    .nav-logo .tray {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-3);
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      transition: color .2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+    .theme-toggle:hover { color: var(--text); }
+    .theme-toggle svg { width: 18px; height: 18px; }
+
+    .nav-cta {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      background: var(--text);
+      color: var(--bg);
+      padding: 8px 18px;
+      border-radius: 4px;
+      text-decoration: none;
+      letter-spacing: 0.3px;
+      transition: background .2s, transform .15s;
+    }
+
+    .nav-cta:hover {
+      background: var(--text-2);
+      transform: translateY(-1px);
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 24px 80px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp .6s ease .1s forwards;
+    }
+
+    .hero-title {
+      font-family: 'Lora', serif;
+      font-size: clamp(48px, 8vw, 80px);
+      font-weight: 500;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      color: var(--text);
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fadeUp .7s ease .2s forwards;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--amber);
+    }
+
+    .hero-subtitle {
+      font-family: 'Lora', serif;
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 400;
+      color: var(--text-3);
+      margin-bottom: 48px;
+      max-width: 640px;
+      opacity: 0;
+      animation: fadeUp .7s ease .35s forwards;
+    }
+
+    .hero-subtitle strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* install pill */
+    .install-block {
+      opacity: 0;
+      animation: fadeUp .7s ease .5s forwards;
+      margin-bottom: 16px;
+    }
+
+    .install-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--text);
+      color: var(--bg);
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .install-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .install-pill:active {
+      transform: translateY(0);
+    }
+
+    .install-pill .prompt {
+      color: var(--amber2);
+      user-select: none;
+    }
+
+    .install-pill .cmd {
+      color: #e8dfd0;
+      letter-spacing: 0.2px;
+    }
+
+    .copy-icon {
+      width: 16px;
+      height: 16px;
+      opacity: .5;
+      flex-shrink: 0;
+      transition: opacity .15s;
+    }
+
+    .install-pill:hover .copy-icon {
+      opacity: 1;
+    }
+
+    .copy-feedback {
+      position: absolute;
+      inset: 0;
+      background: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      letter-spacing: 1px;
+      opacity: 0;
+      transition: opacity .2s;
+      pointer-events: none;
+    }
+
+    .copy-feedback.show {
+      opacity: 1;
+    }
+
+    .install-hint {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--ink4);
+      letter-spacing: 0.3px;
+      opacity: 0;
+      animation: fadeUp .7s ease .65s forwards;
+    }
+
+    /* floating badge */
+    .os-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 200px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 32px;
+      opacity: 0;
+      animation: fadeUp .6s ease .8s forwards;
+    }
+
+    .os-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green2);
+    }
+
+    /* scroll indicator */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      animation: fadeIn 1s ease 1.2s forwards;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--text-4));
+      animation: scrollPulse 2s ease infinite;
+    }
+
+    @keyframes scrollPulse {
+
+      0%,
+      100% {
+        opacity: .3;
+        transform: scaleY(0.8);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scaleY(1);
+      }
+    }
+
+    /* DEMO SECTION */
+    .demo-section {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 100px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .demo-window {
+      border-radius: 18px;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--border);
+      overflow: hidden;
+      position: relative;
+      background: var(--bg-2);
+      opacity: 0;
+      transform: translateY(40px);
+      transition: all 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .demo-window.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .demo-video-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/10;
+      background: var(--bg-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .demo-video-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform .6s ease;
+    }
+
+    .demo-video-wrapper:hover img {
+      transform: scale(1.02);
+    }
+
+    .play-button {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bg);
+      z-index: 20;
+      transition: all .3s ease;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .play-button svg {
+      width: 32px;
+      height: 32px;
+      margin-left: 4px;
+    }
+
+    .demo-video-wrapper:hover .play-button {
+      transform: scale(1.1);
+      background: var(--text);
+    }
+
+    .demo-caption {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--bg);
+      background: var(--text);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      z-index: 20;
+    }
+
+    /* Simulation Elements */
+    .sim-cursor {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='white' stroke='black' stroke-width='1.5' %3E%3Cpath d='M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z' /%3E%3C/svg%3E") no-repeat;
+      pointer-events: none;
+      z-index: 100;
+      transition: all 0.5s cubic-bezier(0.45, 0, 0.55, 1);
+      opacity: 0;
+    }
+    .demo-video-wrapper.playing .sim-cursor { opacity: 1; }
+
+    .click-ripple {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: rgba(200, 134, 10, 0.4);
+      border-radius: 50%;
+      transform: scale(0);
+      pointer-events: none;
+      z-index: 99;
+      animation: ripple 0.6s ease-out;
+    }
+    @keyframes ripple {
+      to { transform: scale(3); opacity: 0; }
+    }
+
+    /* TERMINAL SECTION */
+    .section {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Lora', serif;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 500;
+      letter-spacing: -1px;
+      color: var(--text);
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+
+    .section-title em {
+      font-style: italic;
+      color: var(--amber);
+    }
+
+    .section-body {
+      font-size: 18px;
+      color: var(--text-3);
+      max-width: 520px;
+      margin-bottom: 48px;
+      line-height: 1.75;
+    }
+
+    /* terminal */
+    .terminal {
+      background: #0d0c0a;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+
+    .terminal-bar {
+      padding: 12px 16px;
+      background: #1a1816;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .t-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .t-dot.r {
+      background: #ff5f57;
+    }
+
+    .t-dot.y {
+      background: #febc2e;
+    }
+
+    .t-dot.g {
+      background: #28c840;
+    }
+
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 0.5px;
+    }
+
+    .terminal-body {
+      padding: 24px 28px;
+      min-height: 320px;
+    }
+
+    .t-line {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 4px;
+      opacity: 0;
+    }
+
+    .t-line.visible {
+      opacity: 1;
+    }
+
+    .t-prompt {
+      color: #c8860a;
+      flex-shrink: 0;
+    }
+
+    .t-cmd {
+      color: #e8dfd0;
+    }
+
+    .t-out {
+      color: #7a6f64;
+      padding-left: 0;
+    }
+
+    .t-out.success {
+      color: #52b788;
+    }
+
+    .t-out.warn {
+      color: #febc2e;
+    }
+
+    .t-out.dim {
+      color: #4a4438;
+    }
+
+    .t-out.highlight {
+      color: #e8dfd0;
+    }
+
+    .t-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: #c8860a;
+      animation: blink .8s ease infinite;
+      vertical-align: middle;
+      border-radius: 1px;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* step cards */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 0;
+    }
+
+    .step-card {
+      padding: 28px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .step-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    .step-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--amber);
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .step-title {
+      font-family: 'Lora', serif;
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .step-body {
+      font-size: 16px;
+      color: var(--text-3);
+      line-height: 1.65;
+    }
+
+    /* features */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feat {
+      background: var(--bg);
+      padding: 32px;
+      transition: background .2s;
+    }
+
+    .feat:hover {
+      background: var(--bg-2);
+    }
+
+    .feat-icon {
+      font-size: 22px;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feat-title {
+      font-family: 'Lora', serif;
+      font-size: 17px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .feat-body {
+      font-size: 15px;
+      color: var(--text-3);
+      line-height: 1.65;
+    }
+
+    /* testimonial / quote */
+    .quote-block {
+      border-left: 3px solid var(--amber);
+      padding: 24px 32px;
+      background: var(--bg-2);
+      border-radius: 0 8px 8px 0;
+      margin: 48px 0;
+    }
+
+    .quote-text {
+      font-family: 'Lora', serif;
+      font-size: 22px;
+      font-style: italic;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .quote-attr {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-4);
+      letter-spacing: 0.5px;
+    }
+
+    /* CTA section */
+    .cta-section {
+      text-align: center;
+      padding: 100px 24px 120px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-bg {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(200, 134, 10, 0.07), transparent 60%);
+      pointer-events: none;
+    }
+
+    .cta-title {
+      font-family: 'Lora', serif;
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 500;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+
+    .cta-title em {
+      font-style: italic;
+      color: var(--amber);
+    }
+
+    .cta-sub {
+      font-size: 18px;
+      color: var(--text-3);
+      margin-bottom: 40px;
+      font-style: italic;
+    }
+
+    /* divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 48px;
+    }
+
+    /* footer */
+    footer {
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      font-family: 'Lora', serif;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+
+    .footer-logo span {
+      color: var(--amber);
+    }
+
+    .footer-note {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-4);
+      letter-spacing: 0.3px;
+    }
+
+    /* animations */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal.delay-1 {
+      transition-delay: .1s;
+    }
+
+    .reveal.delay-2 {
+      transition-delay: .2s;
+    }
+
+    .reveal.delay-3 {
+      transition-delay: .3s;
+    }
+
+    /* responsive */
+    @media(max-width:700px) {
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+
+      nav {
+        padding: 16px 20px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .section {
+        padding: 60px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <a href="#" class="nav-logo">
+      <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="logo-tray" d="M3 13L3 17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17L21 13" />
+        <path d="M7 13L12 8L17 13" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" />
+        <rect x="10" y="14" width="4" height="2" rx="1" fill="var(--text-4)" opacity="0.3" />
+      </svg>
+      <span class="cache">cache</span><span class="tray">Tray</span>
+    </a>
+    <div class="nav-links">
+      <a href="#demo">demo</a>
+      <a href="#how">how it works</a>
+      <a href="#features">features</a>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle Theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+    </div>
+    <a href="#install" class="nav-cta">get it free</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-circle c1"></div>
+      <div class="hero-circle c2"></div>
+    </div>
+
+    <p class="hero-eyebrow">multi-platform · system tray memory</p>
+
+    <h1 class="hero-title">
+      your system tray<br /><em>memory.</em>
+    </h1>
+
+    <p class="hero-subtitle">
+      <strong>Your external memory in the system tray.</strong><br/>
+      Drop in snippets, links, and ideas instantly and stay focused with 72-hour auto-cleanup.
+    </p>
+
+    <div class="install-block">
+      <button class="install-pill" onclick="copyInstall(this)" id="mainInstall">
+        <span class="prompt">$</span>
+        <span class="cmd">npx cachetray</span>
+        <svg class="copy-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="5" width="9" height="9" rx="1.5" />
+          <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" />
+        </svg>
+        <div class="copy-feedback" id="mainFeedback">copied ✓</div>
+      </button>
+    </div>
+
+    <p class="install-hint">requires node 16+ · macOS & windows · free forever</p>
+
+  </section>
+
+  <!-- SIMULATED DEMO -->
+  <section class="demo-section" id="demo">
+    <div style="text-align:center;margin-bottom:48px;">
+      <p class="section-label reveal">product demo</p>
+      <h2 class="section-title reveal delay-1">See it in action:<br /><em>Capture, paste, forget.</em></h2>
+    </div>
+
+    <div class="demo-window reveal delay-2">
+      <div class="demo-video-wrapper" id="simWrapper" onclick="startSim()">
+        <img
+          src="/Users/vinay/.gemini/antigravity/brain/0380683c-70e9-4f8f-9860-e6b8ab5cc4a8/cachetray_mockup_1776747184351.png"
+          alt="CacheTray UI Demo" id="simImage">
+        <div class="sim-cursor" id="simCursor"></div>
+        <div class="play-button" id="playBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <div class="demo-caption" id="simCaption">Click Play to see the magic</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="how">
+    <p class="section-label reveal">the workflow</p>
+    <h2 class="section-title reveal delay-1">Goodbye tab overload.<br /><em>Hello focus.</em></h2>
+    <p class="section-body reveal delay-2">
+      Stop keeping 50 tabs open for "later". Drop the link in CacheTray, find it instantly, and let it vanish in 72
+      hours.
+    </p>
+
+    <div class="steps">
+      <div class="step-card reveal">
+        <p class="step-num">01 / zero friction</p>
+        <h3 class="step-title">⌃ Space from anywhere</h3>
+        <p class="step-body">One keyboard shortcut. One window. Zero distractions. Open CacheTray from any app and your
+          notes drop down right where you are.</p>
+      </div>
+      <div class="step-card reveal delay-1">
+        <p class="step-num">02 / auto-sort</p>
+        <h3 class="step-title">the developer scratchpad</h3>
+        <p class="step-body">Paste code snippets, terminal commands, or colors. CacheTray auto-detects and formats them.
+          No more messy .txt files on your desktop.</p>
+      </div>
+      <div class="step-card reveal delay-2">
+        <p class="step-num">03 / ephemeral</p>
+        <h3 class="step-title">it cleans itself</h3>
+        <p class="step-body">Everything you capture is temporary. After 72 hours, it's gone. No archive to manage, no
+          bloat. Just the work that matters now.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TERMINAL -->
+  <section class="section" id="install" style="padding-top:0;">
+    <p class="section-label reveal">terminal walkthrough</p>
+    <h2 class="section-title reveal delay-1">watch it <em>install.</em></h2>
+    <p class="section-body reveal delay-2">
+      Open Terminal or PowerShell and run this. Here's exactly what you'll see.
+    </p>
+
+    <div class="terminal reveal delay-2" id="terminal">
+      <div class="terminal-bar">
+        <div class="t-dot r"></div>
+        <div class="t-dot y"></div>
+        <div class="t-dot g"></div>
+        <div class="terminal-title">zsh — 80×24</div>
+      </div>
+      <div class="terminal-body" id="termBody">
+        <div class="t-line" id="tl0">
+          <span class="t-prompt">~</span>
+          <span class="t-cmd">npx cachetray<span class="t-cursor" id="cursor"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;justify-content:center;">
+      <button onclick="replayTerminal()"
+        style="font-family:'DM Mono',monospace;font-size:12px;color:var(--ink3);background:transparent;border:1px solid var(--cream3);padding:7px 18px;border-radius:20px;cursor:pointer;transition:all .2s;letter-spacing:.3px;"
+        onmouseover="this.style.borderColor='var(--ink3)'" onmouseout="this.style.borderColor='var(--cream3)'">
+        ↺ replay
+      </button>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features" style="padding-top:20px;">
+    <p class="section-label reveal">what's inside</p>
+    <h2 class="section-title reveal delay-1">built for how you <em>actually</em> work.</h2>
+
+    <div class="features reveal delay-2">
+      <div class="feat">
+        <span class="feat-icon">⌃</span>
+        <h3 class="feat-title">Global shortcut</h3>
+        <p class="feat-body">⌃ Space opens CacheTray from any app — Chrome, VS Code, Figma, anywhere. Direct access to
+          your short-term memory.</p>
+      </div>
+      <div class="feat">
+        <span class="feat-icon">⌛</span>
+        <h3 class="feat-title">72-Hour vanishing</h3>
+        <p class="feat-body">Everything auto-deletes after 72 hours. Designed for focus, not for hoarding. Keep your
+          tray as clean as your mind.</p>
+      </div>
+      <div class="feat">
+        <span class="feat-icon">⬡</span>
+        <h3 class="feat-title">Clusters</h3>
+        <p class="feat-body">Work, study, shipping — each project gets its own cluster. Switch contexts without losing
+          anything.</p>
+      </div>
+      <div class="feat">
+        <span class="feat-icon">⟳</span>
+        <h3 class="feat-title">Auto-split</h3>
+        <p class="feat-body">When a category fills up, a new one spawns automatically. No mess. No scrolling through 50
+          code snippets.</p>
+      </div>
+      <div class="feat">
+        <span class="feat-icon">◻</span>
+        <h3 class="feat-title">Image paste</h3>
+        <p class="feat-body">⌘V an image directly into CacheTray. It's stored, previewed, and ⌘V-able back to your
+          clipboard whenever you need it.</p>
+      </div>
+      <div class="feat">
+        <span class="feat-icon">◈</span>
+        <h3 class="feat-title">Stays out of the way</h3>
+        <p class="feat-body">Minimal footprint. Launches at startup. Click outside and it vanishes. Zero cognitive
+          overhead.
+        </p>
+      </div>
+    </div>
+
+    <div class="quote-block reveal" style="margin-top:48px;">
+      <p class="quote-text">"I used to paste things to myself in WhatsApp to find them later. CacheTray is what I
+        actually wanted."</p>
+      <p class="quote-attr">— the developer, building it for himself</p>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <div class="divider"></div>
+
+  <section class="cta-section" id="download">
+    <div class="cta-bg"></div>
+    <h2 class="cta-title reveal">ready to<br /><em>stop forgetting?</em></h2>
+    <p class="cta-sub reveal delay-1">one command. your system tray. forever free.</p>
+
+    <div class="install-block reveal delay-2" style="opacity:1;animation:none;">
+      <button class="install-pill" onclick="copyInstall(this)" id="ctaInstall">
+        <span class="prompt">$</span>
+        <span class="cmd">npx cachetray</span>
+        <svg class="copy-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="5" width="9" height="9" rx="1.5" />
+          <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" />
+        </svg>
+        <div class="copy-feedback" id="ctaFeedback">copied ✓</div>
+      </button>
+    </div>
+    <p class="install-hint"
+      style="margin-top:14px;opacity:.6;font-family:'DM Mono',monospace;font-size:11px;color:var(--ink4);letter-spacing:.3px;">
+      requires node 16+ · macOS & Windows</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <footer>
+    <div class="footer-logo">Cache<span>Tray</span></div>
+    <div class="footer-note">made with care · open source · free forever</div>
+  </footer>
+
+  <script>
+    // ── THEME TOGGLE ──────────────────────────────────────
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      updateThemeIcon(!isDark);
+      localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    }
+
+    function updateThemeIcon(isDark) {
+      const btn = document.getElementById('themeBtn');
+      btn.innerHTML = isDark 
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>`;
+    }
+
+    // init theme
+    (function() {
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateThemeIcon(saved === 'dark');
+    })();
+
+    // ── SIMULATION LOGIC ──────────────────────────────────
+    let isSimulating = false;
+    function startSim() {
+      if (isSimulating) return;
+      isSimulating = true;
+      const wrapper = document.getElementById('simWrapper');
+      const cursor = document.getElementById('simCursor');
+      const playBtn = document.getElementById('playBtn');
+      const caption = document.getElementById('simCaption');
+
+      wrapper.classList.add('playing');
+      playBtn.style.opacity = '0';
+      
+      // Step 1: Move to "Copy" area
+      caption.innerText = "Copying a snippet...";
+      cursor.style.top = "40%";
+      cursor.style.left = "30%";
+      
+      setTimeout(() => {
+        clickEffect(cursor.style.left, cursor.style.top);
+        caption.innerText = "Copied! Now opening CacheTray...";
+        
+        // Step 2: Move to Menu Bar area
+        setTimeout(() => {
+          cursor.style.top = "5%";
+          cursor.style.left = "50%";
+          
+          setTimeout(() => {
+            clickEffect(cursor.style.left, cursor.style.top);
+            caption.innerText = "Everything categorized instantly.";
+            
+            // Finalize
+            setTimeout(() => {
+              isSimulating = false;
+              wrapper.classList.remove('playing');
+              playBtn.style.opacity = '1';
+              caption.innerText = "Try it yourself: ⌃ Space";
+            }, 2000);
+          }, 800);
+        }, 1000);
+      }, 1000);
+    }
+
+    function clickEffect(x, y) {
+      const ripple = document.createElement('div');
+      ripple.className = 'click-ripple';
+      ripple.style.left = x;
+      ripple.style.top = y;
+      document.getElementById('simWrapper').appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    // ── COPY INSTALL ──────────────────────────────────────
+    function copyInstall(btn) {
+      const feedback = btn.querySelector('.copy-feedback');
+      navigator.clipboard.writeText('npx cachetray').catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = 'npx cachetray';
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { document.execCommand('copy'); } catch (e) { }
+        document.body.removeChild(ta);
+      });
+      feedback.classList.add('show');
+      setTimeout(() => feedback.classList.remove('show'), 1800);
+    }
+
+    // ── TERMINAL ANIMATION ────────────────────────────────
+    const TERMINAL_LINES = [
+      // [type, prompt, content, delay]
+      ['cmd', '~', 'npx cachetray', 0],
+      ['out', '', '', 600],
+      ['out', '', '  ╭─────────────────────────────╮', 700],
+      ['out', '', '  │      CacheTray  v1.0.0      │', 800],
+      ['out', '', '  │   your system tray memory   │', 900],
+      ['out', '', '  ╰─────────────────────────────╯', 1000],
+      ['out', '', '', 1100],
+      ['out', '', '  checking node version...', 1200],
+      ['suc', '', '  ✓ node v20.11.0 — looks good', 1600],
+      ['out', '', '', 1700],
+      ['out', '', '  installing dependencies...', 1800],
+      ['dim', '', '    electron@28.0.0', 2200],
+      ['dim', '', '    menubar@9.3.1', 2500],
+      ['dim', '', '    added 312 packages in 4.2s', 2900],
+      ['out', '', '', 3000],
+      ['suc', '', '  ✓ installed successfully', 3100],
+      ['out', '', '', 3200],
+      ['out', '', '  registering login item...', 3300],
+      ['suc', '', '  ✓ CacheTray will start on login', 3700],
+      ['out', '', '', 3800],
+      ['hi', '', '  ⌃ Space   →   open / close', 3900],
+      ['hi', '', '  72 Hours  →   auto-delete', 4000],
+      ['hi', '', '  Esc       →   dismiss', 4100],
+      ['out', '', '', 4300],
+      ['suc', '', '  🎉 CacheTray is running in your system tray!', 4500],
+      ['out', '', '', 4700],
+      ['cmd', '~', '', 4800],
+    ];
+
+    let termTimer = null;
+
+    function replayTerminal() {
+      const body = document.getElementById('termBody');
+      body.innerHTML = '';
+      clearTimeout(termTimer);
+      // hide cursor initially
+      runTerminal();
+    }
+
+    function runTerminal() {
+      const body = document.getElementById('termBody');
+      body.innerHTML = '';
+
+      TERMINAL_LINES.forEach((line, i) => {
+        const [type, prompt, content, delay] = line;
+        setTimeout(() => {
+          const div = document.createElement('div');
+          div.className = 't-line';
+
+          if (type === 'cmd') {
+            div.innerHTML = '<span class="t-prompt">~</span><span class="t-cmd">' +
+              escHtml(content) +
+              (i === TERMINAL_LINES.length - 1 ? '<span class="t-cursor"></span>' : '') + '</span>';
+          } else if (type === 'suc') {
+            div.innerHTML = '<span class="t-out success">' + escHtml(content) + '</span>';
+          } else if (type === 'dim') {
+            div.innerHTML = '<span class="t-out dim">' + escHtml(content) + '</span>';
+          } else if (type === 'hi') {
+            div.innerHTML = '<span class="t-out highlight">' + escHtml(content) + '</span>';
+          } else if (type === 'warn') {
+            div.innerHTML = '<span class="t-out warn">' + escHtml(content) + '</span>';
+          } else {
+            div.innerHTML = '<span class="t-out">' + escHtml(content) + '</span>';
+          }
+
+          div.style.opacity = '0';
+          body.appendChild(div);
+          requestAnimationFrame(() => {
+            div.style.transition = 'opacity .25s ease';
+            div.style.opacity = '1';
+          });
+          body.scrollTop = body.scrollHeight;
+        }, delay);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ── SCROLL REVEAL ─────────────────────────────────────
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          // start terminal when it comes into view
+          if (e.target.id === 'terminal') {
+            setTimeout(runTerminal, 300);
+            observer.unobserve(e.target);
+          }
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    document.querySelectorAll('.step-card').forEach(el => observer.observe(el));
+    observer.observe(document.getElementById('terminal'));
+  </script>
+</body>
+
+</html>
