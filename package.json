@@ -1,6 +1,6 @@
 {
   "name": "cachetray",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "CacheTray: Focus, distilled into one window.",
   "bin": {
     "cachetray": "bin/install.js"

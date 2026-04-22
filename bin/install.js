@@ -6,9 +6,14 @@ console.log("\n⚡️ Welcome to CacheTray Setup ⚡️");
 console.log("Fetching the latest installation scripts from GitHub...\n");
 
 try {
-  // Executes our bash script directly
-  execSync('curl -sS https://raw.githubusercontent.com/wenayy/QuickNotes/main/install.sh | bash', { stdio: 'inherit' });
+  if (process.platform === 'win32') {
+    console.log("Windows detected. Launching CacheTray...\n");
+    execSync('npm start', { stdio: 'inherit' });
+  } else {
+    // macOS/Linux: Executes our bash script directly
+    execSync('curl -sS https://raw.githubusercontent.com/wenayy/QuickNotes/main/install.sh | bash', { stdio: 'inherit' });
+  }
 } catch (e) {
-  console.error("❌ Installation failed:", e.message);
+  console.error("❌ Setup failed:", e.message);
   process.exit(1);
 }
