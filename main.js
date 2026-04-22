@@ -115,6 +115,10 @@ mb.on('ready', () => {
   ipcMain.on('hide-window', () => {
     mb.hideWindow()
   })
+  
+  ipcMain.on('quit-app', () => {
+    app.quit()
+  })
 
 })
 

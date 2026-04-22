@@ -1040,19 +1040,10 @@
         </button>
 
         <div style="display:flex; gap:12px; margin-top:8px;" class="reveal delay-2">
-          <a href="https://github.com/wenayy/QuickNotes/releases/latest" class="download-btn">
-            <svg class="download-icon" style="width:16px;height:16px;margin:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5m-7 7l7 7 7-7"/></svg>
-            macOS (.dmg)
-          </a>
-          <a href="https://github.com/wenayy/QuickNotes/releases/latest" class="download-btn">
-            <svg class="download-icon" style="width:16px;height:16px;margin:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5m-7 7l7 7 7-7"/></svg>
-            Windows (.exe)
+          <a href="#install" class="download-btn">
+            Get CacheTray
           </a>
         </div>
-        
-        <p class="install-hint reveal delay-3" style="max-width:400px; line-height:1.4;">
-          <strong>Mac Tip:</strong> If you see a "Damaged" warning, just <strong>Right-Click</strong> the app and select <strong>Open</strong> to authorize it for the first time.
-        </p>
       </div>
     </div>
 
@@ -1130,7 +1121,32 @@
       <div class="terminal-body" id="termBody">
         <div class="t-line" id="tl0">
           <span class="t-prompt">~</span>
-          <span class="t-cmd">npx cachetray<span class="t-cursor" id="cursor"></span></span>
+          <span class="t-cmd">npm install -g cachetray<span class="t-cursor" id="cursor"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOWNLOAD & INSTALL GUIDE -->
+    <div id="install-guide" class="reveal delay-3" style="margin-top: 80px;">
+      <div class="download-grid">
+        <div class="download-card glass">
+          <svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M5 15l7 7 7-7"/></svg>
+          <h3 class="feat-title">macOS</h3>
+          <p class="feat-body">Universal DMG for Intel & Apple Silicon</p>
+          <a href="https://github.com/wenayy/QuickNotes/releases/latest" class="download-btn">Download .dmg</a>
+          <p class="download-meta">Requires macOS 11+</p>
+          <div style="text-align:left; font-size:13px; background:rgba(0,0,0,0.05); padding:15px; border-radius:12px; margin-top:10px;">
+            <p style="color:var(--amber); font-weight:600; margin-bottom:5px;">Security Tip:</p>
+            <p style="color:var(--text-3); line-height:1.4;">If you see a "Damaged" warning, don't worry. This is because the app is unsigned. Just <strong>Right-Click</strong> the app and select <strong>Open</strong> to authorize it.</p>
+          </div>
+        </div>
+
+        <div class="download-card glass">
+          <svg class="download-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M5 15l7 7 7-7"/></svg>
+          <h3 class="feat-title">Windows</h3>
+          <p class="feat-body">Portable 64-bit installer</p>
+          <a href="https://github.com/wenayy/QuickNotes/releases/latest" class="download-btn">Download .exe</a>
+          <p class="download-meta">Requires Windows 10+</p>
         </div>
       </div>
     </div>
@@ -1322,31 +1338,30 @@
     // ── TERMINAL ANIMATION ────────────────────────────────
     const TERMINAL_LINES = [
       // [type, prompt, content, delay]
-      ['cmd', '~', 'npx cachetray', 0],
+      ['cmd', '~', 'npm install -g cachetray', 0],
       ['out', '', '', 600],
       ['out', '', '  ╭─────────────────────────────╮', 700],
-      ['out', '', '  │      CacheTray  v1.0.0      │', 800],
+      ['out', '', '  │      CacheTray  v1.1.4      │', 800],
       ['out', '', '  │   your system tray memory   │', 900],
       ['out', '', '  ╰─────────────────────────────╯', 1000],
       ['out', '', '', 1100],
       ['out', '', '  checking node version...', 1200],
       ['suc', '', '  ✓ node v20.11.0 — looks good', 1600],
       ['out', '', '', 1700],
-      ['out', '', '  installing dependencies...', 1800],
-      ['dim', '', '    electron@28.0.0', 2200],
-      ['dim', '', '    menubar@9.3.1', 2500],
+      ['out', '', '  fetching from npm registry...', 1800],
+      ['dim', '', '    cachetray@1.1.4', 2200],
       ['dim', '', '    added 312 packages in 4.2s', 2900],
       ['out', '', '', 3000],
-      ['suc', '', '  ✓ installed successfully', 3100],
+      ['suc', '', '  ✓ installed globally', 3100],
       ['out', '', '', 3200],
-      ['out', '', '  registering login item...', 3300],
-      ['suc', '', '  ✓ CacheTray will start on login', 3700],
+      ['out', '', '  to start, run:', 3300],
+      ['hi', '', '    cachetray', 3700],
       ['out', '', '', 3800],
       ['hi', '', '  ⌃ Space   →   open / close', 3900],
       ['hi', '', '  72 Hours  →   auto-delete', 4000],
       ['hi', '', '  Esc       →   dismiss', 4100],
       ['out', '', '', 4300],
-      ['suc', '', '  🎉 CacheTray is running in your system tray!', 4500],
+      ['suc', '', '  🎉 CacheTray is ready!', 4500],
       ['out', '', '', 4700],
       ['cmd', '~', '', 4800],
     ];

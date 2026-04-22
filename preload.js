@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resize:    (height)  => ipcRenderer.send('resize', height),
   hide:      ()        => ipcRenderer.send('hide-window'),
   setLock:   (locked)  => ipcRenderer.send('set-lock', locked),
-  onLockReset: (callback) => ipcRenderer.on('lock-reset', () => callback())
+  onLockReset: (callback) => ipcRenderer.on('lock-reset', () => callback()),
+  quit:      ()        => ipcRenderer.send('quit-app')
 })
