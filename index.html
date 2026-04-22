@@ -990,6 +990,24 @@
 
     // ── LOCK / PIN WINDOW ────────────────────────────────────
     let isLocked = false;
+
+    function resetLock() {
+      isLocked = false;
+      const btn = document.getElementById('lockBtn');
+      const app = document.querySelector('.app');
+      const badge = document.getElementById('lockedBadge');
+      const icon = document.getElementById('lockIcon');
+      btn.classList.remove('locked');
+      app.classList.remove('locked');
+      badge.classList.remove('show');
+      icon.innerHTML = `<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>`;
+      // sync main process just in case
+      if (window.electronAPI) window.electronAPI.setLock(false);
+    }
+
+    // every time the window becomes visible, reset lock to default (unlocked)
+    window.addEventListener('focus', resetLock);
+
     function toggleLock() {
       isLocked = !isLocked;
       const btn = document.getElementById('lockBtn');
