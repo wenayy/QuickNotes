@@ -1,6 +1,6 @@
 {
   "name": "cachetray",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "CacheTray: An ephemeral, high-speed asset collector for professional workflows.",
   "bin": {
     "cachetray": "bin/install.js"
